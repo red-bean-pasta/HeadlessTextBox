@@ -1,8 +1,8 @@
 namespace MonoTextBox.Utils;
 
-public interface IBranch<T> where T : IBranch<T>
+public interface IBranch<TSelf> where TSelf : IBranch<TSelf>
 {
     int Length { get; }
     
-    (T, T) Split(int index);
+    (TSelf, TSelf) Split(int index);
 }

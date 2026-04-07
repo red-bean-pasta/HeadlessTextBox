@@ -1,4 +1,4 @@
-namespace MonoTextBox.Font;
+namespace MonoTextBox.Formatting.Font;
 
 public record struct GlyphMetrics(
     float LeftSideBearing,

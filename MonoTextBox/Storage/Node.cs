@@ -1,8 +1,6 @@
-using System.Diagnostics;
-using MonoTextBox.Storage;
 using MonoTextBox.Utils;
 
-namespace MonoTextBox.Editing.Buffer;
+namespace MonoTextBox.Storage;
 
 public class Node: Utils.Node<Piece>
 {

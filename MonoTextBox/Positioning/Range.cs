@@ -1,15 +1,17 @@
 namespace MonoTextBox.Positioning;
 
+// To distinguish with Slice:
+//  Range represents position;
+//  Slice represents slice.
 public record struct Range(
-    float Start,
-    float End
-)
+    float StartPos,
+    float EndPos)
 {
     public static Range operator +(Range left, Range right) 
-        => left with { End = left.End + right.End };
+        => left with { EndPos = left.EndPos + right.EndPos };
     
     public static Range operator +(Range range, float addend) 
-        => new(range.Start + addend, range.End + addend);
+        => new(range.StartPos + addend, range.EndPos + addend);
 
-    public float Width => End - Start;
+    public float Width => EndPos - StartPos;
 }

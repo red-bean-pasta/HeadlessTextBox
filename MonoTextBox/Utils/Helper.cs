@@ -1,4 +1,4 @@
-namespace MonoTextBox;
+namespace MonoTextBox.Utils;
 
 public static class Helper
 {

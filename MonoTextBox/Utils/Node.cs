@@ -4,19 +4,19 @@ namespace MonoTextBox.Utils;
 
 public class Node<T> where T : IBranch<T>
 {
-    private T _value;
+    protected T Value;
 
-    private Node<T>? _leftSubNode;
-    private Node<T>? _rightSubNode;
+    protected Node<T>? LeftSubNode;
+    protected Node<T>? RightSubNode;
 
-    private int _subTreeLength;
-    private int _subTreeHeight;
+    protected int SubTreeLength;
+    protected int SubTreeHeight;
 
 
-    private int LeftLength => _leftSubNode?._subTreeLength ?? 0;
-    private int BeforeRightLength => LeftLength + _value.Length;
-    private int LeftHeight => _leftSubNode?._subTreeHeight ?? 0;
-    private int RightHeight => _rightSubNode?._subTreeHeight ?? 0;
+    protected int LeftLength => LeftSubNode?.SubTreeLength ?? 0;
+    protected int BeforeRightLength => LeftLength + Value.Length;
+    protected int LeftHeight => LeftSubNode?.SubTreeHeight ?? 0;
+    protected int RightHeight => RightSubNode?.SubTreeHeight ?? 0;
     
     
     public Node(
@@ -24,48 +24,56 @@ public class Node<T> where T : IBranch<T>
         Node<T>? leftSubNode, 
         Node<T>? rightSubNode)
     {
-        _value = value;
-        _leftSubNode = leftSubNode;
-        _rightSubNode = rightSubNode;
+        Value = value;
+        LeftSubNode = leftSubNode;
+        RightSubNode = rightSubNode;
 
         Recalculate();
     }
     
     
-    public T FindT(int index)
+    public (T Value, int Index) Find(int index)
     {
         switch (CheckLeftRight(index))
         {
             case < 0:
-                Debug.Assert(_leftSubNode is not null);
-                return _leftSubNode.FindT(index);
+                Debug.Assert(LeftSubNode is not null);
+                return LeftSubNode.Find(index);
             case 0:
-                return _value;
+                return (Value, index);
             case > 0:
-                Debug.Assert(_rightSubNode is not null);
-                return _rightSubNode.FindT(index - BeforeRightLength);
+                Debug.Assert(RightSubNode is not null);
+                return RightSubNode.Find(index - BeforeRightLength);
         }
     }
-    
 
-    /// <returns>If depth added</returns>
-    public Node<T> InsertAndBalance(T value, int index)
+    
+    public Node<T> AppendAndBalance(T value)
     {
+        var index = BeforeRightLength + RightSubNode?.SubTreeLength ?? 0;
+        return InsertAndBalance(index, value);
+    }
+    
+    /// <returns>If depth added</returns>
+    public Node<T> InsertAndBalance(int index, T value)
+    {
+        Debug.Assert(value.Length > 0);
+
         Insert(value, index);
         return Balance();
     }
     
     private void Insert(T value, int insertIndex)
-    {
+    {   
         if (insertIndex <= LeftLength)
         {
-            Debug.Assert(_leftSubNode is not null);
-            _leftSubNode = InsertToSubNode(_leftSubNode, value, insertIndex);
+            Debug.Assert(LeftSubNode is not null);
+            LeftSubNode = InsertToSubNode(LeftSubNode, value, insertIndex);
         }
         else if (insertIndex >= BeforeRightLength)
         {
             var rightIndex = insertIndex - BeforeRightLength;
-            _rightSubNode = InsertToSubNode(_rightSubNode, value, rightIndex);
+            RightSubNode = InsertToSubNode(RightSubNode, value, rightIndex);
         }
         else
         {
@@ -77,10 +85,10 @@ public class Node<T> where T : IBranch<T>
 
     private void InsertToCurrentT(T value, int splitIndex)
     {
-        var (leftSplit, rightSplit) = SplitT(_value, splitIndex);
-        _leftSubNode = InsertToSubNode(_leftSubNode, leftSplit, LeftLength);
-        _rightSubNode = InsertToSubNode(_rightSubNode, rightSplit, 0);
-        _value = value;
+        var (leftSplit, rightSplit) = SplitT(Value, splitIndex);
+        LeftSubNode = InsertToSubNode(LeftSubNode, leftSplit, LeftLength);
+        RightSubNode = InsertToSubNode(RightSubNode, rightSplit, 0);
+        Value = value;
     }
 
     private static Node<T> InsertToSubNode(Node<T>? subNode, T value, int insertIndex)
@@ -88,7 +96,62 @@ public class Node<T> where T : IBranch<T>
         if (subNode is null)
             return new Node<T>(value, null, null);
         else
-            return subNode.InsertAndBalance(value, insertIndex);
+            return subNode.InsertAndBalance(insertIndex, value);
+    }
+
+
+    public Node<T>? RemoveAndBalance(int index)
+    {
+        if (index < LeftLength)
+        {
+            Debug.Assert(LeftSubNode is not null);
+            LeftSubNode = LeftSubNode.RemoveAndBalance(index);
+        }
+        else if (index >= BeforeRightLength)
+        {
+            RightSubNode = RightSubNode?.RemoveAndBalance(index - BeforeRightLength);
+        }
+        else if (LeftSubNode is not null)
+        {
+            var (value, left) = LeftSubNode.PopRightLeaf();
+            LeftSubNode = left;
+            Value = value;
+        }
+        else if (RightSubNode is not null)
+        {
+            var (value, right) = RightSubNode.PopLeftLeaf();
+            RightSubNode = right;
+            Value = value;
+        }
+        else
+        {
+            return null;
+        }
+        
+        Recalculate();
+        return Balance();
+    }
+
+    private (T Value, Node<T>? Node) PopRightLeaf()
+    {
+        if (RightSubNode is null)
+            return (Value, LeftSubNode);
+        
+        var (leaf, right) = RightSubNode.PopRightLeaf();
+        RightSubNode = right;
+        Recalculate();
+        return (leaf, Balance());
+    }
+    
+    private (T Value, Node<T>? Node) PopLeftLeaf()
+    {
+        if (LeftSubNode is null)
+            return (Value, RightSubNode);
+        
+        var (leaf, left) = LeftSubNode.PopLeftLeaf();
+        LeftSubNode = left;
+        Recalculate();
+        return (leaf, Balance());
     }
     
 
@@ -115,18 +178,18 @@ public class Node<T> where T : IBranch<T>
 
     private static Node<T> RotateRight(Node<T> node)
     {
-        Debug.Assert(node._leftSubNode is not null);
+        Debug.Assert(node.LeftSubNode is not null);
         
-        var newRoot = node._leftSubNode;
+        var newRoot = node.LeftSubNode;
         
-        var newLeft = newRoot._leftSubNode;
+        var newLeft = newRoot.LeftSubNode;
         
         var newRight = node;
-        newRight._leftSubNode = newRoot._rightSubNode;
+        newRight.LeftSubNode = newRoot.RightSubNode;
         newRight.Recalculate();
         
-        newRoot._leftSubNode = newLeft;
-        newRoot._rightSubNode = newRight;
+        newRoot.LeftSubNode = newLeft;
+        newRoot.RightSubNode = newRight;
         newRoot.Recalculate();
         
         return newRoot;
@@ -134,18 +197,18 @@ public class Node<T> where T : IBranch<T>
 
     private static Node<T> RotateLeft(Node<T> node)
     {
-        Debug.Assert(node._rightSubNode is not null);
+        Debug.Assert(node.RightSubNode is not null);
 
-        var newRoot = node._rightSubNode;
+        var newRoot = node.RightSubNode;
         
         var newLeft = node;
-        newLeft._rightSubNode = newRoot._leftSubNode;
+        newLeft.RightSubNode = newRoot.LeftSubNode;
         newLeft.Recalculate();
         
-        var newRight = newRoot._rightSubNode;
+        var newRight = newRoot.RightSubNode;
         
-        newRoot._leftSubNode = newLeft;
-        newRoot._rightSubNode = newRight;
+        newRoot.LeftSubNode = newLeft;
+        newRoot.RightSubNode = newRight;
         newRoot.Recalculate();
         
         return newRoot;
@@ -153,20 +216,20 @@ public class Node<T> where T : IBranch<T>
 
     private void StraightenLeft()
     {
-        var left = _leftSubNode;
+        var left = LeftSubNode;
         Debug.Assert(left is not null);
         
-        _leftSubNode = left.LeftHeight < left.RightHeight
+        LeftSubNode = left.LeftHeight < left.RightHeight
             ? RotateLeft(left)
             : left;
     }
     
     private void StraightenRight()
     {
-        var right = _rightSubNode;
+        var right = RightSubNode;
         Debug.Assert(right is not null);
         
-        _rightSubNode = right.RightHeight < right.LeftHeight
+        RightSubNode = right.RightHeight < right.LeftHeight
             ? RotateRight(right)
             : right;
     }
@@ -174,15 +237,15 @@ public class Node<T> where T : IBranch<T>
 
     private void Recalculate()
     {
-        _subTreeHeight = Math.Max(
-                _leftSubNode?._subTreeHeight ?? 0,
-                _rightSubNode?._subTreeHeight ?? 0
+        SubTreeHeight = Math.Max(
+                LeftSubNode?.SubTreeHeight ?? 0,
+                RightSubNode?.SubTreeHeight ?? 0
             ) + 1;
 
-        _subTreeLength = 
-            _value.Length
-            + (_leftSubNode?._subTreeLength ?? 0)
-            + (_rightSubNode?._subTreeLength ?? 0);
+        SubTreeLength = 
+            Value.Length
+            + (LeftSubNode?.SubTreeLength ?? 0)
+            + (RightSubNode?.SubTreeLength ?? 0);
     }
 
     
