@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using Icu;
+using MonoTextBox.Deprecated.Positioning.SourceReading;
 using MonoTextBox.Formatting;
 using MonoTextBox.Formatting.Font;
-using MonoTextBox.Positioning.SpanEnumerating;
 using MonoTextBox.Positioning.WordBreaking;
 
 namespace MonoTextBox.Positioning;
@@ -27,28 +27,28 @@ public class Paragraph
     
     public static Paragraph Build(
         float width,
-        Buffer buffer,
+        ISource paragraph,
         Locale? locale)
     {
         var p = new Paragraph();
-        p.Init(width, buffer, locale);
+        p.Init(width, paragraph, locale);
         return p;
     }
     
     
     private void Init(
         float lineWidth,
-        Buffer buffer,
+        ISource paragraph,
         Locale? locale) 
-        => Update(lineWidth, buffer, 0, locale);
+        => Update(lineWidth, paragraph, 0, locale);
 
     public unsafe void Update(
         float lineWidth,
-        Buffer paragraph,
+        ISource paragraph,
         int changeIndex,
         Locale? locale)
     {
-        Debug.Assert(paragraph.Text.IndexNewLine() < 0);
+        Debug.Assert(!paragraph.GetTextSpan().IsWhiteSpace());
         
         CharCount = paragraph.Length;
         
@@ -59,7 +59,7 @@ public class Paragraph
         if (updateBuffer.Length == 0) // Possible when the update is solely about removing and no word rewrapping
             return;
         var wordWrapper = LineBreakerManager.Get(locale);
-        fixed (char* ptr = updateBuffer.Text)
+        fixed (char* ptr = updateBuffer.GetTextSpan())
         {
             foreach (var offset in wordWrapper.Enumerate(ptr, updateBuffer.Length)) 
                 AppendWord(lineWidth, updateBuffer.Slice(offset));
@@ -67,18 +67,18 @@ public class Paragraph
     }
     
 
-    private void AppendWord(float lineWidth, Buffer buffer)
+    private void AppendWord(float lineWidth, ISource source)
     {
-        if (buffer.Text.IsWhiteSpace())
+        if (source.GetTextSpan().IsWhiteSpace())
         {
-            AppendWhitespaces(lineWidth, buffer);
+            AppendWhitespaces(lineWidth, source);
             return;
         }
         
-        var range = CalculateWordRange(buffer);
+        var range = CalculateWordRange(source);
         if (range.Width > lineWidth) // Word super long 
         {
-            AppendLongWord(lineWidth, buffer);
+            AppendLongWord(lineWidth, source);
             return;
         }
 
@@ -86,13 +86,13 @@ public class Paragraph
         {
             _lines.Add(new Line());
         } 
-        AppendWithinWord(buffer);
+        AppendWithinWord(source);
     }
 
-    private void AppendWhitespaces(float lineWidth, Buffer buffer)
+    private void AppendWhitespaces(float lineWidth, ISource source)
     {
         var line = _lines.Last();
-        foreach (var (c, f) in buffer)
+        foreach (var (c, f) in source)
         {
             var range = CalculateCharRange(c, f);
             var room = lineWidth - line.RightEdge;
@@ -102,13 +102,13 @@ public class Paragraph
         }
     }
     
-    private void AppendLongWord(float lineWidth, Buffer buffer)
+    private void AppendLongWord(float lineWidth, ISource source)
     {
         var i = 0;
         var line = new Line();
-        while (i < buffer.Length)
+        while (i < source.Length)
         {
-            var (c, f) = buffer[i];
+            var (c, f) = source[i];
             var addend = CalculateCharRange(c, f);
             
             if (Line.LineRange(addend, line).EndPos <= lineWidth)
@@ -126,10 +126,10 @@ public class Paragraph
         }
     }
 
-    private void AppendWithinWord(Buffer buffer)
+    private void AppendWithinWord(ISource source)
     {
         var line = _lines.Last();
-        foreach (var (c, f) in buffer) 
+        foreach (var (c, f) in source) 
             line.Append(CalculateCharRange(c, f));
     }
 
@@ -158,10 +158,10 @@ public class Paragraph
     }
     
 
-    private static Range CalculateWordRange(Buffer buffer)
+    private static Range CalculateWordRange(ISource source)
     {
         var range = new Range();
-        foreach (var (c, f) in buffer)
+        foreach (var (c, f) in source)
             range += CalculateCharRange(c, f);
         return range;
     }

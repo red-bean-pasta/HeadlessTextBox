@@ -1,8 +1,9 @@
 using System.Diagnostics;
 using Icu;
-using MonoTextBox.Positioning.SourceReading;
+using MonoTextBox.Deprecated.Positioning.SourceReading;
 using MonoTextBox.Positioning.SpanEnumerating;
 using MonoTextBox.Utils;
+using MonoTextBox.Utils.AvlTree;
 
 namespace MonoTextBox.Positioning;
 
@@ -27,14 +28,14 @@ public class Document : Node<ParagraphBranch>
 
     public static Document Build(
         float width,
-        ISource doc,
+        ISourceable content,
         Locale? locale = null)
     {
         Document? result = null;
 
-        foreach (var offset in doc[..].EnumerateNewLines())
+        foreach (var offset in content[..].GetTextSpan().EnumerateNewLines())
         {
-            var paragraph = ParagraphBranch.Build(width, doc.Slice(offset), locale);
+            var paragraph = ParagraphBranch.Build(width, content.Slice(offset), locale);
 
             if (result is null)
                 result = new Document(paragraph, width, locale);
@@ -54,15 +55,15 @@ public class Document : Node<ParagraphBranch>
     /// <param name="length"></param>
     /// <param name="doc">Result doc after inserting</param>
     /// <returns></returns>
-    public Document Insert(int start, int length, ISource doc)
+    public Document Insert(int start, int length, ISourceable doc)
     {
         var inserted = doc.Slice(start, length);
-        return !HasNewLine(inserted)
+        return !HasNewLine(inserted.GetTextSpan())
             ? InsertInLine(start, length, doc)
             : InsertMultiLines(start, length, doc);
     }
 
-    private Document InsertInLine(int start, int length, ISource doc)
+    private Document InsertInLine(int start, int length, ISourceable doc)
     {
         var (paragraph, index) = Find(start);
         var paraStart = start - index;
@@ -74,12 +75,12 @@ public class Document : Node<ParagraphBranch>
         return this;
     }
 
-    private Document InsertMultiLines(int start, int length, ISource doc)
+    private Document InsertMultiLines(int start, int length, ISourceable doc)
     {
         var result = this;
         var lastSlice = new Slice(-1, -1); // Delay append to insert last new line to right
 
-        foreach (var slice in doc.Slice(start, length).EnumerateNewLines())
+        foreach (var slice in doc.Slice(start, length).GetTextSpan().EnumerateNewLines())
         {
             var absolute = slice + start;
             if (lastSlice.Start == -1)
@@ -97,7 +98,7 @@ public class Document : Node<ParagraphBranch>
         return result;
     }
 
-    private Document InsertSplitLine(Slice slice, ISource doc, bool toLeft)
+    private Document InsertSplitLine(Slice slice, ISourceable doc, bool toLeft)
     {
         var (result, left, right) = FindAndSplit(slice.Start);
 
@@ -121,14 +122,14 @@ public class Document : Node<ParagraphBranch>
     public Document Remove(
         int start,
         ReadOnlySpan<char> removed,
-        ISource doc)
+        ISourceable doc)
     {
         return !HasNewLine(removed)
             ? RemoveInLine(start, removed, doc)
             : RemoveMultiLines(start, removed, doc);
     }
 
-    private Document RemoveInLine(int start, ReadOnlySpan<char> removed, ISource doc)
+    private Document RemoveInLine(int start, ReadOnlySpan<char> removed, ISourceable doc)
     {
         var absoluteIndex = start;
         var (paragraph, relativeIndex) = Find(absoluteIndex);
@@ -136,7 +137,7 @@ public class Document : Node<ParagraphBranch>
         return this;
     }
 
-    private Document RemoveMultiLines(int start, ReadOnlySpan<char> removed, ISource doc)
+    private Document RemoveMultiLines(int start, ReadOnlySpan<char> removed, ISourceable doc)
     {
         var result = this;
 
@@ -152,7 +153,7 @@ public class Document : Node<ParagraphBranch>
     private (Document Doc, ParagraphBranch First, ParagraphBranch Last) RemoveLinesAndPop(
         int start,
         ReadOnlySpan<char> removed,
-        ISource doc)
+        ISourceable doc)
     {
         Document? document = this;
         ParagraphBranch? first = null;
@@ -178,7 +179,7 @@ public class Document : Node<ParagraphBranch>
     }
 
     private void RemoveParagraphLine(
-        ISource doc,
+        ISourceable doc,
         int absoluteIndex,
         ParagraphBranch paragraph,
         int relativeIndex,
@@ -228,7 +229,7 @@ public class Document : Node<ParagraphBranch>
 
 
     private ParagraphBranch MergeParagraph(
-        ISource doc,
+        ISourceable doc,
         int start,
         ParagraphBranch left, 
         ParagraphBranch right)
@@ -239,8 +240,6 @@ public class Document : Node<ParagraphBranch>
     }
 
 
-    private static bool HasNewLine(Buffer buffer) => HasNewLine(buffer.Text);
-    
     private static bool HasNewLine(ReadOnlySpan<char> text) => text.IndexNewLine() >= 0;
 }
 
@@ -264,11 +263,11 @@ public class ParagraphBranch: IBranch<ParagraphBranch>
     
     
     public static ParagraphBranch Empty(float lineWidth, Locale? locale)
-        => Build(lineWidth, Buffer.Empty, locale);
+        => new(Paragraph.Empty());
     
     public static ParagraphBranch Build(
         float lineWidth,
-        Buffer paragraph,
+        ISource paragraph,
         Locale? locale)
     {
         return new ParagraphBranch(
@@ -279,7 +278,7 @@ public class ParagraphBranch: IBranch<ParagraphBranch>
 
     public void Update(
         float lineWidth,
-        Buffer paragraph,
+        ISource paragraph,
         int changeIndex,
         Locale? locale)
     {

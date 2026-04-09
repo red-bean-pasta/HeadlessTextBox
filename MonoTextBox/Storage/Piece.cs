@@ -1,4 +1,5 @@
 using MonoTextBox.Utils;
+using MonoTextBox.Utils.AvlTree;
 
 namespace MonoTextBox.Storage;
 
@@ -6,24 +7,24 @@ public readonly struct Piece: IBranch<Piece>
 {
     public enum SourceType
     {
-        Save,
+        Original,
         Add
     }
     
     
     public SourceType Source { get; }
     
-    public int StartIndex { get; }
+    public int Start { get; }
     
     public int Length { get; }
 
 
     public Piece(
-        int startIndex, 
+        int start, 
         int length, 
         SourceType source = SourceType.Add)
     {
-        StartIndex = startIndex;
+        Start = start;
         Source = source;
         Length = length;
     }
@@ -31,8 +32,8 @@ public readonly struct Piece: IBranch<Piece>
     
     public (Piece, Piece) Split(int index)
     {
-        var left = new Piece(StartIndex, index, Source);
-        var right = new Piece(StartIndex + index, Length - index, Source);
+        var left = new Piece(Start, index, Source);
+        var right = new Piece(Start + index, Length - index, Source);
         return (left, right);
     }
 }
