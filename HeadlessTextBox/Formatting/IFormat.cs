@@ -1,6 +1,6 @@
 namespace MonoTextBox.Formatting;
 
-public class Format
+public interface IFormat: IEquatable<IFormat>
 {
     public int Font { get; set; }
 }

@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using Icu;
-using MonoTextBox.Deprecated.Positioning.SourceReading;
+using MonoTextBox.Compositing.Contract;
 using MonoTextBox.Formatting;
 using MonoTextBox.Formatting.Font;
 using MonoTextBox.Positioning.WordBreaking;
@@ -27,7 +27,7 @@ public class Paragraph
     
     public static Paragraph Build(
         float width,
-        ISource paragraph,
+        in SourceSlice paragraph,
         Locale? locale)
     {
         var p = new Paragraph();
@@ -38,13 +38,13 @@ public class Paragraph
     
     private void Init(
         float lineWidth,
-        ISource paragraph,
+        in SourceSlice paragraph,
         Locale? locale) 
         => Update(lineWidth, paragraph, 0, locale);
 
     public unsafe void Update(
         float lineWidth,
-        ISource paragraph,
+        in SourceSlice paragraph,
         int changeIndex,
         Locale? locale)
     {
@@ -67,7 +67,7 @@ public class Paragraph
     }
     
 
-    private void AppendWord(float lineWidth, ISource source)
+    private void AppendWord(float lineWidth, in SourceSlice source)
     {
         if (source.GetTextSpan().IsWhiteSpace())
         {
@@ -89,7 +89,7 @@ public class Paragraph
         AppendWithinWord(source);
     }
 
-    private void AppendWhitespaces(float lineWidth, ISource source)
+    private void AppendWhitespaces(float lineWidth, in SourceSlice source)
     {
         var line = _lines.Last();
         foreach (var (c, f) in source)
@@ -102,7 +102,7 @@ public class Paragraph
         }
     }
     
-    private void AppendLongWord(float lineWidth, ISource source)
+    private void AppendLongWord(float lineWidth, in SourceSlice source)
     {
         var i = 0;
         var line = new Line();
@@ -126,7 +126,7 @@ public class Paragraph
         }
     }
 
-    private void AppendWithinWord(ISource source)
+    private void AppendWithinWord(in SourceSlice source)
     {
         var line = _lines.Last();
         foreach (var (c, f) in source) 
@@ -158,7 +158,7 @@ public class Paragraph
     }
     
 
-    private static Range CalculateWordRange(ISource source)
+    private static Range CalculateWordRange(in SourceSlice source)
     {
         var range = new Range();
         foreach (var (c, f) in source)
@@ -166,12 +166,12 @@ public class Paragraph
         return range;
     }
     
-    private static Range CalculateCharRange(char c, Format format)
+    private static Range CalculateCharRange(char c, IFormat format)
     {
         Debug.Assert(!char.IsControl(c));
 
         var font = FontManager.GetFont(format.Font);
-        var glyph = font.GetGlyph(c);
+        var glyph = font.GetGlyphMetrics(c);
         var start = glyph.LeftSideBearing;
         var end = glyph.LeftSideBearing + glyph.Width + glyph.RightSideBearing;
         return new Range(start, end);

@@ -1,4 +1,3 @@
-using MonoTextBox.Deprecated.Positioning.SourceReading;
 using MonoTextBox.Formatting;
 using MonoTextBox.Storage;
 using MonoTextBox.Utils;
@@ -19,27 +18,38 @@ public class SourceBuffer
         Original = string.Empty;
         Added = new AddBuffer();
         
-        var piece = new Piece(0, 0, Piece.SourceType.Original);
+        var piece = new Piece(0, Original.Length, Piece.SourceType.Original);
         PieceTree = new PieceTree(piece, null, null);
-        
+
         var format = new FormatBranch();
         FormatTree = new FormatTree(format, null, null);
+    }
+    
+    public SourceBuffer(string text, FormatTree format)
+    {
+        Original = text;
+        Added = new AddBuffer();
+        
+        var piece = new Piece(0, Original.Length, Piece.SourceType.Original);
+        PieceTree = new PieceTree(piece, null, null);
+
+        FormatTree = format;
     }
 
 
     public TextElement this[Index index] => GetValueAt(index);
 
-    public ISource this[Range range] => Slice(range);
+    public SourceSlice this[Range range] => Slice(range);
 
-    private ISource Slice(Range range)
+    private SourceSlice Slice(Range range)
     {
         var (start, end) = range.GetOffsetAndLength(PieceTree.Length);
         return Slice(start, end);
     }
     
-    public ISource Slice(Slice slice) => Slice(slice.Start, slice.Length);
+    public SourceSlice Slice(Slice slice) => Slice(slice.Start, slice.Length);
 
-    public ISource Slice(int start, int length)
+    public SourceSlice Slice(int start, int length)
     {
         return new SourceSlice(start, length, this);
     }
