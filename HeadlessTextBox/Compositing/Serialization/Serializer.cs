@@ -1,11 +1,10 @@
 using HeadlessTextBox.Compositing.Contracts;
-using HeadlessTextBox.Compositing.Serialization;
 
-namespace HeadlessTextBox;
+namespace HeadlessTextBox.Compositing.Serialization;
 
 public static class Serializer
 {
-    public static (string text, string format) Serialize(SourceBuffer source)
+    public static (string Text, string Format) Serialize(SourceBuffer source)
     {
         return (
             TextSerializer.Serialize(source.Text),

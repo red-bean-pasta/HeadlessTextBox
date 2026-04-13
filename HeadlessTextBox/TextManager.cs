@@ -7,7 +7,7 @@ using HeadlessTextBox.Positioning;
 using HeadlessTextBox.Utils;
 using Icu;
 
-namespace HeadlessTextBox.Compositing;
+namespace HeadlessTextBox;
 
 public class TextManager
 {
@@ -64,6 +64,9 @@ public class TextManager
         var formatTree = FormatDeserializer<T>.Deserialize(format);
         return new TextManager(text, formatTree, width, undoStackSize, locale);
     }
+
+
+    public (string Text, string Format) Serialize() => Serializer.Serialize(_storage);
 
     
     /// <summary>

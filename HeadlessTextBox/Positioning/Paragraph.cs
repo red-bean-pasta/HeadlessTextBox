@@ -197,12 +197,11 @@ public class Paragraph
         return range;
     }
     
-    private static Slot CalculateCharSlot(char c, IFormat format)
+    private static Slot CalculateCharSlot(char character, IFormat format)
     {
-        Debug.Assert(!char.IsControl(c));
+        Debug.Assert(!char.IsControl(character));
 
-        var font = FontManager.GetFont(format.Font);
-        var metrics = font.GetGlyphMetrics(c);
+        var metrics = format.GetGlyphMetrics(character);
         
         var start = metrics.LeftSideBearing;
         var end = metrics.LeftSideBearing + metrics.Width + metrics.RightSideBearing;
