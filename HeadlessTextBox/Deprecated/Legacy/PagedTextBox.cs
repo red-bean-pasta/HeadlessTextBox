@@ -1,3 +1,4 @@
+using HeadlessTextBox.Compositing;
 using HeadlessTextBox.Legacy.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;

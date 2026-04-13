@@ -234,7 +234,7 @@ public class Node<T> where T : IBranch<T>
     // a -> b -> c
     // =>
     // a <- b -> c
-    protected Node<T> Balance()
+    protected virtual Node<T> Balance()
     {
         var difference = LeftHeight - RightHeight;
         switch (difference)
@@ -309,7 +309,7 @@ public class Node<T> where T : IBranch<T>
     }
 
 
-    protected void Recalculate()
+    protected virtual void Recalculate()
     {
         SubTreeHeight = Math.Max(
                 LeftSubNode?.SubTreeHeight ?? 0,

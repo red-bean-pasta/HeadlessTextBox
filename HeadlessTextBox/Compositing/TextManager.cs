@@ -7,19 +7,20 @@ using HeadlessTextBox.Positioning;
 using HeadlessTextBox.Utils;
 using Icu;
 
-namespace HeadlessTextBox;
+namespace HeadlessTextBox.Compositing;
 
 public class TextManager
 {
     private readonly SourceBuffer _storage;
 
     private Caret _caret;
-    private bool _newRecordForced = false;
+    private bool _newRecordForced;
     private readonly UndoRedoManager _undoRedoManager;
 
-    private float _width;
-    private Locale _locale;
     private Document _document;
+    public float Width { get; private set; }
+    public Locale Locale { get; private set; }
+    public float Height => _document.SubTreeHeightY;
 
 
     public TextManager(
@@ -31,9 +32,9 @@ public class TextManager
         _caret = default;
         _undoRedoManager = new UndoRedoManager(undoStackSize);
 
-        _width = width;
-        _locale = locale ?? new Locale();
-        _document = Document.Build(_width, _storage, _locale);
+        Width = width;
+        Locale = locale ?? new Locale();
+        _document = Document.Build(Width, _storage, Locale);
     }
 
     public TextManager(
@@ -47,8 +48,8 @@ public class TextManager
         _caret = new Caret(text.Length, 0);
         _undoRedoManager = new UndoRedoManager(undoStackSize);
 
-        _width = width;
-        _locale = locale ?? new Locale();
+        Width = width;
+        Locale = locale ?? new Locale();
         _document = Document.Build(width, _storage, locale);
     }
 
@@ -64,24 +65,31 @@ public class TextManager
         return new TextManager(text, formatTree, width, undoStackSize, locale);
     }
 
-
-    public TextElementsEnumerator EnumerateInScopeElements(float startHeight, float spanHeight)
+    
+    /// <summary>
+    /// <see cref="VisualChar"/> returned from enumeration is relatively measured
+    /// with the document starting at (0, 0)
+    /// </summary>
+    /// <param name="startHeight"></param>
+    /// <param name="spanHeight"></param>
+    /// <returns></returns>
+    public TextElementEnumerator EnumerateInScopeElements(float startHeight, float spanHeight)
     {
-        return new TextElementsEnumerator(_storage, _document, startHeight, spanHeight);
+        return new TextElementEnumerator(_storage, _document, startHeight, spanHeight);
     }
 
 
     // Whole doc level change
     public void Resize(float newWidth)
     {
-        _width = newWidth;
-        _document = Document.Build(newWidth, _storage, _locale);
+        Width = newWidth;
+        _document = Document.Build(newWidth, _storage, Locale);
     }
 
     public void ChangeLocale(Locale newLocale)
     {
-        _locale = newLocale;
-        _document = Document.Build(_width, _storage, _locale);
+        Locale = newLocale;
+        _document = Document.Build(Width, _storage, Locale);
     }
 
 
@@ -316,7 +324,7 @@ public class TextManager
 }
 
 
-public ref struct TextElementsEnumerator
+public ref struct TextElementEnumerator
 {
     private readonly float _topY;
     
@@ -329,7 +337,7 @@ public ref struct TextElementsEnumerator
     public VisualChar Current => GetCurrentValue();
     
     
-    public TextElementsEnumerator(
+    public TextElementEnumerator(
         SourceBuffer storage,
         Document document,
         float startHeight,
@@ -346,7 +354,7 @@ public ref struct TextElementsEnumerator
     }
 
 
-    public TextElementsEnumerator GetEnumerator() => this;
+    public TextElementEnumerator GetEnumerator() => this;
 
     
     public bool MoveNext()

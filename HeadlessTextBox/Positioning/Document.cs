@@ -16,6 +16,14 @@ public class Document : Node<ParagraphBranch>
     private readonly Locale? _locale;
 
 
+    /// <summary>
+    /// To distinguish with <see cref="Node{T}.SubTreeHeight"/>: <br/>
+    /// <see cref="SubTreeHeightY"/>: positional height in Y <br/>
+    /// <see cref="Node{T}.SubTreeHeight"/>: node tree "depth"
+    /// </summary>
+    public float SubTreeHeightY { get; private set; }
+    
+
     private Document(
         ParagraphBranch branch,
         float width,
@@ -50,27 +58,6 @@ public class Document : Node<ParagraphBranch>
 
     public NodeEnumerator EnumerateSliced(int start, int length) => base.GetEnumerator(start, length);
 
-
-    public IEnumerable<(int Index, float X, float Y)> GetInRangePositions(float startHeight, float spanHeight)
-    {
-        var (height, start, end) = FindInHeightIndices(startHeight, spanHeight);
-        
-        var i = start;
-        var h = height;
-        while (i < end)
-        {
-            var paragraph = Find(i).Value;
-            foreach (var line in paragraph.Lines)
-            {
-                h += line.Height;
-                foreach (var slot in line.Positions)
-                {
-                    yield return (i, slot.Range.StartPos, h);
-                    i++;
-                }
-            }
-        }
-    }
     
     public (float OffsetHeight, int StartIndex, int Length) FindInHeightIndices(float startHeight, float spanHeight)
     {
@@ -246,6 +233,17 @@ public class Document : Node<ParagraphBranch>
         var length = paragraph.Length - removedLength;
         var updated = doc.Slice(start, length);
         paragraph.Update(_width, updated, relativeIndex, _locale);
+    }
+
+
+    protected override void Recalculate()
+    {
+        SubTreeHeightY = 
+            Value.Height
+            + (((Document?)LeftSubNode)?.SubTreeHeightY ?? 0)
+            + (((Document?)RightSubNode)?.SubTreeHeightY ?? 0);
+        
+        base.Recalculate();
     }
 
 

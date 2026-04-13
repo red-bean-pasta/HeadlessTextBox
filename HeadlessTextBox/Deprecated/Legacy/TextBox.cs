@@ -1,4 +1,5 @@
 using HeadlessTextBox;
+using HeadlessTextBox.Compositing;
 using HeadlessTextBox.Legacy.Editing;
 using HeadlessTextBox.Legacy.Rendering;
 using Microsoft.Xna.Framework;
